@@ -69,7 +69,7 @@ api.get(
             const cached = await cacheGet(c.env.TIDE_CACHE, cacheKey);
             if (cached) return c.json({ ...cached, cached: true });
 
-            const result = getTideExtremes(lat, lon, start, end, { datum, units });
+            const result = await getTideExtremes(c.env, lat, lon, start, end, { datum, units });
 
             await cacheSet(c.env.TIDE_CACHE, cacheKey, result);
             return c.json(result);
@@ -157,7 +157,7 @@ api.get("/stations/lookup", async (c) => {
         const cached = await cacheGet(c.env.TIDE_CACHE, cacheKey);
         if (cached) return c.json({ ...cached, cached: true });
 
-        const station = getStationById(id);
+        const station = await getStationById(c.env, id);
 
         if (!station) {
             return c.json({

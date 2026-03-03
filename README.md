@@ -14,8 +14,9 @@ Real-time tidal prediction API with **harmonic analysis + meteorological correct
 | **Global Fallback** | 7,600+ stations via the `neaps` library for any coordinate not near a custom station |
 | **Tide Extremes** | High/low tide times and heights with ~1-second precision (golden-section refinement) |
 | **Timeline** | Water level series at any interval for graphing |
-| **Nearby Stations** | Geo-search across both custom and neaps databases |
-| **Caching** | In-memory 15-minute TTL cache |
+| **Nearby Stations** | Rapid geo-search via an in-memory `stations_index.json` |
+| **Caching** | Cloudflare KV edge-caching for astronomical forecasts |
+| **Database** | Cloudflare D1 (SQLite) containing ~6,400 raw harmonic constituents |
 | **Rate Limiting** | Configurable via `.env` |
 
 ---
@@ -28,7 +29,14 @@ npm install        # or pnpm install
 
 # Configure Cloudflare KV Cache
 npx wrangler kv namespace create "TIDE_CACHE"
-# Ensure the generated ID is in wrangler.toml
+
+# Configure Cloudflare D1 Database
+npx wrangler d1 create "tide_db"
+
+# Ensure the generated IDs are in wrangler.toml
+
+# Seed Local Database
+node tools/seed-d1-direct.js
 
 # Run in local development using Wrangler
 npm run dev        # http://127.0.0.1:8787
@@ -39,8 +47,8 @@ npm start
 
 ### Requirements
 
-- Node.js ≥ 18
-- No external database required
+- Node.js ≥ 20
+- Cloudflare Account (for deploying KV and D1)
 - No API keys required (Open-Meteo is free)
 
 ---
@@ -250,8 +258,10 @@ src/
 ├── middleware/
 │   ├── validation.js          # Request parameter validation
 │   └── errorHandler.js        # Global error handler
-└── data/
-    └── customStations.js      # Harmonic constants for Indian stations
+├── data/
+│   ├── customStations.js      # Harmonic constants for Indian stations
+│   └── stations_index.json    # Lightweight geo-index for rapid searching 
+└── tools/                     # Scripts to seed/fetch the D1 database
 ```
 
 ### Data Flow
@@ -266,8 +276,12 @@ Request (lat, lon)
        NO                            │
        │                             │
        ▼                             │
-  neaps library            Layer 1 astronomical height
-  (7,600+ stations)                  │
+  Geo-Index Search         Layer 1 astronomical height
+  (stations_index.json)              │
+       │                             │
+       ▼                             │
+  Fetch Harmonics                    │
+  (Cloudflare D1)                    │
        │                             │
        └──────────┬──────────────────┘
                   │
@@ -312,7 +326,9 @@ Request (lat, lon)
 
 ### Cloudflare Workers (Edge-Native)
 
-This application is built using the **Hono** framework to run entirely on **Cloudflare Workers**. It utilizes **Cloudflare KV** to natively distribute cached API hits across edge nodes globally to prevent excessive downstream lookups for mathematical harmony calculations.
+This application is built using the **Hono** framework to run entirely on **Cloudflare Workers**.
+- **Cloudflare KV** natively distributes cached API hits across edge nodes globally to prevent excessive downstream lookups for mathematical harmony calculations.
+- **Cloudflare D1** houses the global database of ~17MB of tide stations, queried dynamically via the edge to stay far underneath the 3MB worker limit payload.
 
 ```bash
 # One-command global deploy:

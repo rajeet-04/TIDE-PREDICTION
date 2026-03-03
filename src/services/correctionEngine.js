@@ -75,7 +75,7 @@ function windSetupCorrection(windSpeedKmh, windDirection) {
  */
 export async function getCorrectedWaterLevel(env, lat, lon, options = {}) {
     // ── Layer 1: Harmonic prediction ──────────────────────
-    const harmonic = getCurrentWaterLevel(lat, lon, options);
+    const harmonic = await getCurrentWaterLevel(env, lat, lon, options);
 
     // ── Layer 2: Weather data ─────────────────────────────
     let weather = null;
@@ -154,7 +154,7 @@ export async function getCorrectedTimeline(
 ) {
     // Import dynamically to avoid circular at module level
     const { getTideTimeline } = await import("./tideService.js");
-    const timeline = getTideTimeline(lat, lon, start, end, options);
+    const timeline = await getTideTimeline(env, lat, lon, start, end, options);
 
     let weather = null;
     let pressureCorrection = 0;

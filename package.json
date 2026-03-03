@@ -17,12 +17,14 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@neaps/tide-predictor": "^0.8.0",
     "dotenv": "^17.3.1",
     "hono": "^4.12.3",
     "neaps": "^0.6.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260305.0",
+    "@neaps/tide-database": "^0.6.20260220",
     "wrangler": "^4.69.0"
   }
 }

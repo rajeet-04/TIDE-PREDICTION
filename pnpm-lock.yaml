@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@neaps/tide-predictor':
+        specifier: ^0.8.0
+        version: 0.8.0
       dotenv:
         specifier: ^17.3.1
         version: 17.3.1
@@ -21,6 +24,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20260305.0
         version: 4.20260305.0
+      '@neaps/tide-database':
+        specifier: ^0.6.20260220
+        version: 0.6.20260220
       wrangler:
         specifier: ^4.69.0
         version: 4.69.0(@cloudflare/workers-types@4.20260305.0)

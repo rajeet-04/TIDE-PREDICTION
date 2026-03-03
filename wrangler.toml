@@ -8,3 +8,8 @@ compatibility_flags = ["nodejs_compat"]
 [[kv_namespaces]]
 binding = "TIDE_CACHE"
 id = "150ce29620944d86b2b8cba06e17dbf0"
+
+[[d1_databases]]
+binding = "TIDE_DB" # The variable name to access this in code (env.TIDE_DB)
+database_name = "tide_db" # The registered D1 database name
+database_id = "b87f7da3-1818-480a-a553-acbe4f04fbad" # Placeholder ID for local development
