@@ -1,15 +1,6 @@
 // ──────────────────────────────────────────
-// Cache Service — In-memory TTL cache
+// Cache Service — Cloudflare KV implementation
 // ──────────────────────────────────────────
-import NodeCache from "node-cache";
-
-const ttl = parseInt(process.env.CACHE_TTL) || 900; // 15 min default
-
-const cache = new NodeCache({
-    stdTTL: ttl,
-    checkperiod: Math.floor(ttl / 2),
-    useClones: false,
-});
 
 /**
  * Generate a cache key from request parameters.
@@ -25,23 +16,45 @@ export function makeCacheKey(prefix, params) {
 
 /**
  * Get a value from cache.
+ * Cloudflare KV limits are asynchronous.
+ * @param {import("@cloudflare/workers-types").KVNamespace} kv
  */
-export function cacheGet(key) {
-    return cache.get(key);
+export async function cacheGet(kv, key) {
+    if (!kv) return null; // Fallback if no KV binding
+    try {
+        return await kv.get(key, "json");
+    } catch (e) {
+        console.error("KV GET Error", e);
+        return null;
+    }
 }
 
 /**
  * Store a value in cache.
+ * @param {import("@cloudflare/workers-types").KVNamespace} kv
  */
-export function cacheSet(key, value, customTtl) {
-    cache.set(key, value, customTtl);
+export async function cacheSet(kv, key, value, ttl = 900) {
+    if (!kv) return;
+    try {
+        await kv.put(key, JSON.stringify(value), { expirationTtl: ttl });
+    } catch (e) {
+        console.error("KV PUT Error", e);
+    }
 }
 
 /**
- * Cache stats for health checks.
+ * Delete a value from cache
+ * @param {import("@cloudflare/workers-types").KVNamespace} kv
  */
-export function cacheStats() {
-    return cache.getStats();
+export async function cacheDelete(kv, key) {
+    if (!kv) return;
+    try {
+        await kv.delete(key);
+    } catch (e) {
+        console.error("KV DELETE Error", e);
+    }
 }
 
-export default cache;
+export function cacheStats() {
+    return { status: "Cloudflare KV doesn't provide synchronous runtime stats." };
+}

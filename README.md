@@ -23,16 +23,17 @@ Real-time tidal prediction API with **harmonic analysis + meteorological correct
 ## Quick Start
 
 ```bash
-# Install
+# Install dependencies
 npm install        # or pnpm install
 
-# Configure (optional — defaults work out of the box)
-cp .env.example .env
+# Configure Cloudflare KV Cache
+npx wrangler kv namespace create "TIDE_CACHE"
+# Ensure the generated ID is in wrangler.toml
 
-# Run in development
-npm run dev        # http://localhost:3001
+# Run in local development using Wrangler
+npm run dev        # http://127.0.0.1:8787
 
-# Run in production
+# Deploy to Cloudflare Network
 npm start
 ```
 
@@ -309,22 +310,14 @@ Request (lat, lon)
 
 ## Deployment & CI/CD
 
-### GitHub Actions (Automation)
+### Cloudflare Workers (Edge-Native)
 
-While GitHub Actions is not a hosting platform for "live" persistent servers (it times out after a few hours), it is the perfect tool for **Continuous Integration (CI)** and **Continuous Deployment (CD)**.
+This application is built using the **Hono** framework to run entirely on **Cloudflare Workers**. It utilizes **Cloudflare KV** to natively distribute cached API hits across edge nodes globally to prevent excessive downstream lookups for mathematical harmony calculations.
 
-We have included a GitHub Actions workflow to:
-
-1. **CI**: Automatically test and lint your code on every push.
-2. **CD**: Deploy the code to your chosen hosting provider (e.g., Render, Railway, Fly.io).
-
-### Recommended Hosting
-
-For this Express backend, we recommend:
-
-- **[Render](https://render.com/)**: Easy "Web Service" setup with automatic GitHub integration.
-- **[Railway](https://railway.app/)**: Very fast setup, supports `pnpm` out of the box.
-- **[Fly.io](https://fly.io/)**: Low-latency edge hosting (great for global tide data).
+```bash
+# One-command global deploy:
+npm run start # (which maps to wrangler deploy)
+```
 
 ---
 

@@ -1,7 +1,7 @@
 // ──────────────────────────────────────────
-// Tide API Routes
+// Tide API Routes (Hono)
 // ──────────────────────────────────────────
-import { Router } from "express";
+import { Hono } from "hono";
 import {
     validateCoordinates,
     validateDateRange,
@@ -19,41 +19,44 @@ import {
     makeCacheKey,
     cacheGet,
     cacheSet,
+    cacheDelete,
 } from "../services/cacheService.js";
 
-const router = Router();
+const api = new Hono();
 
 // ── GET /api/tide/current ───────────────────────────────
 // Returns the current corrected water level (Layer 1 + 2)
-router.get("/tide/current", validateCoordinates, async (req, res, next) => {
+api.get("/tide/current", validateCoordinates, async (c) => {
     try {
-        const { lat, lon } = req.coords;
-        const { datum, units } = req.query;
+        const { lat, lon } = c.get("coords");
+        const datum = c.req.query("datum");
+        const units = c.req.query("units");
 
         const cacheKey = makeCacheKey("current", { lat, lon, datum, units });
-        const cached = cacheGet(cacheKey);
-        if (cached) return res.json({ ...cached, cached: true });
+        const cached = await cacheGet(c.env.TIDE_CACHE, cacheKey);
+        if (cached) return c.json({ ...cached, cached: true });
 
-        const result = await getCorrectedWaterLevel(lat, lon, { datum, units });
+        const result = await getCorrectedWaterLevel(c.env, lat, lon, { datum, units });
 
-        cacheSet(cacheKey, result);
-        res.json(result);
+        await cacheSet(c.env.TIDE_CACHE, cacheKey, result);
+        return c.json(result);
     } catch (err) {
-        next(err);
+        throw err; // Caught by global error handler
     }
 });
 
 // ── GET /api/tide/extremes ──────────────────────────────
 // Returns high/low tides in a date range (Layer 1 only)
-router.get(
+api.get(
     "/tide/extremes",
     validateCoordinates,
     validateDateRange,
-    async (req, res, next) => {
+    async (c) => {
         try {
-            const { lat, lon } = req.coords;
-            const { start, end } = req.dateRange;
-            const { datum, units } = req.query;
+            const { lat, lon } = c.get("coords");
+            const { start, end } = c.get("dateRange");
+            const datum = c.req.query("datum");
+            const units = c.req.query("units");
 
             const cacheKey = makeCacheKey("extremes", {
                 lat,
@@ -63,30 +66,32 @@ router.get(
                 datum,
                 units,
             });
-            const cached = cacheGet(cacheKey);
-            if (cached) return res.json({ ...cached, cached: true });
+            const cached = await cacheGet(c.env.TIDE_CACHE, cacheKey);
+            if (cached) return c.json({ ...cached, cached: true });
 
             const result = getTideExtremes(lat, lon, start, end, { datum, units });
 
-            cacheSet(cacheKey, result);
-            res.json(result);
+            await cacheSet(c.env.TIDE_CACHE, cacheKey, result);
+            return c.json(result);
         } catch (err) {
-            next(err);
+            throw err;
         }
     }
 );
 
 // ── GET /api/tide/timeline ──────────────────────────────
 // Returns corrected water level timeline for graphing
-router.get(
+api.get(
     "/tide/timeline",
     validateCoordinates,
     validateDateRange,
-    async (req, res, next) => {
+    async (c) => {
         try {
-            const { lat, lon } = req.coords;
-            const { start, end } = req.dateRange;
-            const { datum, units, interval } = req.query;
+            const { lat, lon } = c.get("coords");
+            const { start, end } = c.get("dateRange");
+            const datum = c.req.query("datum");
+            const units = c.req.query("units");
+            const interval = c.req.query("interval");
 
             const cacheKey = makeCacheKey("timeline", {
                 lat,
@@ -97,75 +102,90 @@ router.get(
                 units,
                 interval,
             });
-            const cached = cacheGet(cacheKey);
-            if (cached) return res.json({ ...cached, cached: true });
+            const cached = await cacheGet(c.env.TIDE_CACHE, cacheKey);
+            if (cached) return c.json({ ...cached, cached: true });
 
-            const result = await getCorrectedTimeline(lat, lon, start, end, {
+            const result = await getCorrectedTimeline(c.env, lat, lon, start, end, {
                 datum,
                 units,
                 interval: interval ? parseInt(interval) : 600,
             });
 
-            cacheSet(cacheKey, result);
-            res.json(result);
+            await cacheSet(c.env.TIDE_CACHE, cacheKey, result);
+            return c.json(result);
         } catch (err) {
-            next(err);
+            throw err;
         }
     }
 );
 
 // ── GET /api/stations/nearby ────────────────────────────
 // Returns nearby tide stations
-router.get("/stations/nearby", validateCoordinates, async (req, res, next) => {
+api.get("/stations/nearby", validateCoordinates, async (c) => {
     try {
-        const { lat, lon } = req.coords;
-        const count = req.query.count || 5;
+        const { lat, lon } = c.get("coords");
+        const count = c.req.query("count") || 5;
 
         const cacheKey = makeCacheKey("stations-nearby", { lat, lon, count });
-        const cached = cacheGet(cacheKey);
-        if (cached) return res.json({ ...cached, cached: true });
+        const cached = await cacheGet(c.env.TIDE_CACHE, cacheKey);
+        if (cached) return c.json({ ...cached, cached: true });
 
         const stations = getNearbyStations(lat, lon, count);
 
         const result = { stations, count: stations.length };
-        cacheSet(cacheKey, result);
-        res.json(result);
+        await cacheSet(c.env.TIDE_CACHE, cacheKey, result);
+        return c.json(result);
     } catch (err) {
-        next(err);
+        throw err;
     }
 });
 
 // ── GET /api/stations/lookup?id=noaa/8723214 ────────────
 // Returns a specific tide station by ID (supports slashes in ID)
-router.get("/stations/lookup", async (req, res, next) => {
+api.get("/stations/lookup", async (c) => {
     try {
-        const { id } = req.query;
+        const id = c.req.query("id");
 
         if (!id) {
-            return res.status(400).json({
+            return c.json({
                 error: "MISSING_STATION_ID",
                 message: "'id' query parameter is required.",
-            });
+            }, 400);
         }
 
         const cacheKey = makeCacheKey("station", { id });
-        const cached = cacheGet(cacheKey);
-        if (cached) return res.json({ ...cached, cached: true });
+        const cached = await cacheGet(c.env.TIDE_CACHE, cacheKey);
+        if (cached) return c.json({ ...cached, cached: true });
 
         const station = getStationById(id);
 
         if (!station) {
-            return res.status(404).json({
+            return c.json({
                 error: "STATION_NOT_FOUND",
                 message: `No station found with ID '${id}'.`,
-            });
+            }, 404);
         }
 
-        cacheSet(cacheKey, { station });
-        res.json({ station });
+        await cacheSet(c.env.TIDE_CACHE, cacheKey, { station });
+        return c.json({ station });
     } catch (err) {
-        next(err);
+        throw err;
     }
 });
 
-export default router;
+// ── DELETE /api/cache ──────────────────────────────────
+// Deletes a specific cache key (Custom requested feature)
+api.delete("/cache", async (c) => {
+    try {
+        const key = c.req.query("key");
+        if (!key) {
+            return c.json({ error: "MISSING_KEY", message: "Cache key is required" }, 400);
+        }
+        await cacheDelete(c.env.TIDE_CACHE, key);
+        return c.json({ success: true, message: `Deleted cache key: ${key}` });
+    } catch (err) {
+        throw err;
+    }
+});
+
+export default api;

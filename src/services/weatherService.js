@@ -1,9 +1,6 @@
 // ─────────────────────────────────────────────────────────
 // Weather Service — Layer 2: Meteorological Data from Open-Meteo
 // ─────────────────────────────────────────────────────────
-const OPEN_METEO_BASE =
-    process.env.OPEN_METEO_BASE_URL ||
-    "https://api.open-meteo.com/v1/forecast";
 
 /**
  * Fetch current meteorological conditions for a coordinate.
@@ -15,7 +12,11 @@ const OPEN_METEO_BASE =
  *   - wind_direction (°) — wind direction at 10m
  *   - temperature   (°C) — air temperature at 2m
  */
-export async function getCurrentWeather(lat, lon) {
+export async function getCurrentWeather(env, lat, lon) {
+    const OPEN_METEO_BASE =
+        env?.OPEN_METEO_BASE_URL ||
+        "https://api.open-meteo.com/v1/forecast";
+
     const url = new URL(OPEN_METEO_BASE);
     url.searchParams.set("latitude", lat);
     url.searchParams.set("longitude", lon);

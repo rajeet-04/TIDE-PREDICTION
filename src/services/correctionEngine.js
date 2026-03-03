@@ -73,7 +73,7 @@ function windSetupCorrection(windSpeedKmh, windDirection) {
  *
  * @returns Full prediction breakdown
  */
-export async function getCorrectedWaterLevel(lat, lon, options = {}) {
+export async function getCorrectedWaterLevel(env, lat, lon, options = {}) {
     // ── Layer 1: Harmonic prediction ──────────────────────
     const harmonic = getCurrentWaterLevel(lat, lon, options);
 
@@ -83,7 +83,7 @@ export async function getCorrectedWaterLevel(lat, lon, options = {}) {
     let windCorrection = 0;
 
     try {
-        weather = await getCurrentWeather(lat, lon);
+        weather = await getCurrentWeather(env, lat, lon);
 
         // Inverse barometer effect
         if (weather.pressure_msl != null) {
@@ -145,6 +145,7 @@ export async function getCorrectedWaterLevel(lat, lon, options = {}) {
  * to warrant per-point fetching for hourly timelines).
  */
 export async function getCorrectedTimeline(
+    env,
     lat,
     lon,
     start,
@@ -160,7 +161,7 @@ export async function getCorrectedTimeline(
     let windCorrection = 0;
 
     try {
-        weather = await getCurrentWeather(lat, lon);
+        weather = await getCurrentWeather(env, lat, lon);
         if (weather.pressure_msl != null) {
             pressureCorrection = inverseBarometerCorrection(weather.pressure_msl);
         }
