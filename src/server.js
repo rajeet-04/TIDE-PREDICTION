@@ -3,6 +3,7 @@
 // ──────────────────────────────────────────────────
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { dashboardHtml } from "./public/index.js";
 import tideRoutes from "./routes/tideRoutes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
@@ -10,6 +11,9 @@ const app = new Hono();
 
 // ── CORS ────────────────────────────────────────────
 app.use("/*", cors());
+
+// ── Root Dashboard ──────────────────────────────────
+app.get("/", (c) => c.html(dashboardHtml));
 
 // ── Health check ────────────────────────────────────
 app.get("/api/health", (c) => {

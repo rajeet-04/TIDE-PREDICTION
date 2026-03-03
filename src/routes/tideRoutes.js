@@ -140,6 +140,63 @@ api.get("/stations/nearby", validateCoordinates, async (c) => {
     }
 });
 
+// ── GET /api/stations/india ──────────────────────────────
+// Returns all Indian stations from D1 (id contains -ind-)
+api.get("/stations/india", async (c) => {
+    try {
+        const cacheKey = "stations-india-list";
+        const cached = await cacheGet(c.env.TIDE_CACHE, cacheKey);
+        if (cached) return c.json({ ...cached, cached: true });
+
+        const { results } = await c.env.TIDE_DB
+            .prepare("SELECT id, json_extract(data,'$.name') as name, COALESCE(json_extract(data,'$.lat'), json_extract(data,'$.latitude')) as lat, COALESCE(json_extract(data,'$.lon'), json_extract(data,'$.longitude')) as lon FROM stations WHERE id LIKE '%-ind-%' OR id LIKE '%-bgd-%' OR id LIKE '%-pak-%' OR id LIKE '%-lka-%' ORDER BY name LIMIT 300")
+            .all();
+
+        const stations = results.map(r => ({
+            id: r.id,
+            name: r.name || r.id,
+            lat: r.lat,
+            lon: r.lon,
+            region: "Indian Subcontinent"
+        }));
+
+        const result = { stations, count: stations.length };
+        await cacheSet(c.env.TIDE_CACHE, cacheKey, result, 86400); // cache 24h
+        return c.json(result);
+    } catch (err) {
+        throw err;
+    }
+});
+
+// ── GET /api/stations/search?q= ──────────────────────────
+// Full-text search across all stations in D1
+api.get("/stations/search", async (c) => {
+    try {
+        const q = c.req.query("q") || "";
+        const limit = Math.min(parseInt(c.req.query("limit") || "30"), 100);
+
+        if (q.length < 2) {
+            return c.json({ error: "QUERY_TOO_SHORT", message: "Query must be at least 2 characters." }, 400);
+        }
+
+        const { results } = await c.env.TIDE_DB
+            .prepare("SELECT id, json_extract(data,'$.name') as name, COALESCE(json_extract(data,'$.lat'), json_extract(data,'$.latitude')) as lat, COALESCE(json_extract(data,'$.lon'), json_extract(data,'$.longitude')) as lon FROM stations WHERE json_extract(data,'$.name') LIKE ? OR id LIKE ? ORDER BY name LIMIT ?")
+            .bind(`%${q}%`, `%${q}%`, limit)
+            .all();
+
+        const stations = results.map(r => ({
+            id: r.id,
+            name: r.name || r.id,
+            lat: r.lat,
+            lon: r.lon
+        }));
+
+        return c.json({ stations, count: stations.length, query: q });
+    } catch (err) {
+        throw err;
+    }
+});
+
 // ── GET /api/stations/lookup?id=noaa/8723214 ────────────
 // Returns a specific tide station by ID (supports slashes in ID)
 api.get("/stations/lookup", async (c) => {
