@@ -307,6 +307,27 @@ Request (lat, lon)
 
 ---
 
+## Deployment & CI/CD
+
+### GitHub Actions (Automation)
+
+While GitHub Actions is not a hosting platform for "live" persistent servers (it times out after a few hours), it is the perfect tool for **Continuous Integration (CI)** and **Continuous Deployment (CD)**.
+
+We have included a GitHub Actions workflow to:
+
+1. **CI**: Automatically test and lint your code on every push.
+2. **CD**: Deploy the code to your chosen hosting provider (e.g., Render, Railway, Fly.io).
+
+### Recommended Hosting
+
+For this Express backend, we recommend:
+
+- **[Render](https://render.com/)**: Easy "Web Service" setup with automatic GitHub integration.
+- **[Railway](https://railway.app/)**: Very fast setup, supports `pnpm` out of the box.
+- **[Fly.io](https://fly.io/)**: Low-latency edge hosting (great for global tide data).
+
+---
+
 ## Documentation
 
 - [`documentation/TECHNICAL.md`](documentation/TECHNICAL.md) — Full tidal math, harmonic constants, challenge log, and accuracy results

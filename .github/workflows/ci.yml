@@ -1,0 +1,37 @@
+name: TIDE CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm install
+        
+      - name: Build check
+        run: node --check src/server.js
+        
+      - name: Start server briefly to check for errors
+        run: |
+          npm start &
+          sleep 5
+          curl --fail http://localhost:3001/api/health || exit 1
+          kill $!
