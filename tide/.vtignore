@@ -1,0 +1,12 @@
+.git
+.vscode
+.cursorrules
+.DS_Store
+node_modules
+vendor
+.vt
+.vt/state.json
+.vscode/extensions.json
+.vt\state.json
+.vscode\extensions.json
+.env
